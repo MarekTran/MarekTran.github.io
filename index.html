@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VA Smearing & Scrolling Test</title>
+    <style>
+        html {
+            scroll-behavior: smooth; /* For smooth scrolling with buttons */
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e; /* Fallback for areas outside sections */
+            color: #f0f0f0;
+            /* Removed display:flex and height:100vh to allow natural document flow and scrolling */
+        }
+
+        section {
+            position: relative; /* For absolute positioning of scroll buttons */
+            box-sizing: border-box;
+        }
+
+        /* --- Section 1: Circular Motion Test --- */
+        #section1 {
+            height: 100vh; /* Occupy full viewport height */
+            display: flex;
+            flex-direction: column;
+            background-color: #111; /* Default for section1 if its own bg isn't set */
+        }
+
+        #controls-s1 {
+            flex-shrink: 0;
+            padding: 10px 15px;
+            background-color: #333333;
+            border-bottom: 2px solid #4CAF50;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px; /* Spacing between control groups */
+            align-items: flex-start;
+            z-index: 10; /* Ensure controls are above moving text if it overlaps */
+        }
+
+        #controls-s1 fieldset, #controls-s2 fieldset {
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 5px 10px 10px 10px;
+            margin: 0;
+        }
+
+        #controls-s1 legend, #controls-s2 legend {
+            font-weight: bold;
+            color: #4CAF50;
+            padding: 0 5px;
+        }
+
+        #controls-s1 label, #controls-s2 label {
+            margin-right: 5px;
+            font-size: 0.9em;
+        }
+
+        #controls-s1 input[type="text"],
+        #controls-s1 input[type="number"],
+        #controls-s2 input[type="text"], /* If added later */
+        #controls-s2 input[type="number"] /* If added later */
+        {
+            padding: 4px 6px;
+            border-radius: 3px;
+            border: 1px solid #666;
+            background-color: #444;
+            color: #f0f0f0;
+            margin-top: 3px;
+        }
+        #controls-s1 input[type="number"] {
+            width: 60px;
+        }
+
+        .color-selector {
+            display: flex;
+            gap: 4px; /* Spacing between color buttons */
+            margin-top: 4px;
+        }
+
+        .color-button {
+            width: 22px;
+            height: 22px;
+            border: 1px solid #777;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: transform 0.1s ease;
+        }
+        .color-button:hover {
+            transform: scale(1.1);
+            border-color: #fff;
+        }
+        .color-button.selected {
+            border: 2px solid #4CAF50; /* Highlight selected color */
+            box-shadow: 0 0 5px #4CAF50;
+        }
+
+        #circular-motion-area {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            transition: background-color 0.3s ease;
+        }
+
+        #moving-text {
+            position: absolute;
+            white-space: nowrap;
+            user-select: none;
+            font-weight: bold;
+            transform: translate(-50%, -50%);
+            transition: color 0.3s ease, font-size 0.1s ease;
+        }
+        .control-group div {
+            margin-bottom: 5px;
+        }
+        .control-group div:last-child {
+            margin-bottom: 0;
+        }
+
+        /* --- Section 2: Scrolling Test --- */
+        #section2 {
+            min-height: 100vh; /* Ensure it's substantial, can be taller with content */
+            padding: 20px;
+            background-color: #FFFFFF; /* Default for section2 */
+            color: #000000; /* Default text color for section2 */
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        #section2 h2 {
+            text-align: center;
+            margin-top: 0;
+            color: inherit; /* Inherit color from #section2 for easy changing */
+        }
+
+        #controls-s2 {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: rgba(128, 128, 128, 0.1); /* Light bg for controls */
+            border-radius: 5px;
+        }
+
+        #scrolling-text-content {
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+            font-size: 18px; /* Default font size for scrolling text */
+        }
+        #scrolling-text-content p {
+            margin-bottom: 1em;
+        }
+
+
+        /* --- Scroll Buttons --- */
+        .scroll-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 100; /* Ensure it's above other content */
+        }
+        .scroll-btn:hover {
+            background-color: #45a049;
+        }
+
+    </style>
+</head>
+<body>
+
+    <section id="section1">
+        <div id="controls-s1">
+            <fieldset class="control-group">
+                <legend>Section 1 Background</legend>
+                <div>
+                    <label>Color:</label>
+                    <div id="s1-bg-color-selector" class="color-selector"></div>
+                </div>
+            </fieldset>
+
+            <fieldset class="control-group">
+                <legend>Moving Text (Section 1)</legend>
+                <div>
+                    <label for="s1-text-input">Content:</label>
+                    <input type="text" id="s1-text-input">
+                </div>
+                <div>
+                    <label>Color:</label>
+                    <div id="s1-text-color-selector" class="color-selector"></div>
+                </div>
+                <div>
+                    <label for="s1-font-size-input">Font Size (px):</label>
+                    <input type="number" id="s1-font-size-input" min="10" max="300">
+                </div>
+            </fieldset>
+        </div>
+
+        <div id="circular-motion-area">
+            <div id="moving-text"></div>
+        </div>
+        <button id="scroll-to-s2-btn" class="scroll-btn">Scrolling Test ↓</button>
+    </section>
+
+    <section id="section2">
+        <h2>Scrolling Test</h2>
+        <div id="controls-s2">
+            <fieldset class="control-group">
+                <legend>Section 2 Background</legend>
+                <div>
+                    <label>Color:</label>
+                    <div id="s2-bg-color-selector" class="color-selector"></div>
+                </div>
+            </fieldset>
+            <fieldset class="control-group">
+                <legend>Section 2 Text</legend>
+                <div>
+                    <label>Color:</label>
+                    <div id="s2-text-color-selector" class="color-selector"></div>
+                </div>
+            </fieldset>
+        </div>
+
+        <div id="scrolling-text-content">
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+            <p>Phasellus vestibulum, quam id fringilla egestas, erat ipsum gravida justo, sit amet scelerisque diam ligula et nisl. Curabitur non elit eu lacus tincidunt feugiat. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vivamus elementum semper nisi. Aenean vulputate eleifend tellus. Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim. Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus.</p>
+            <p>Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi. Aenean vulputate eleifend tellus. Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim. Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus. Phasellus viverra nulla ut metus varius laoreet. Quisque rutrum. Aenean imperdiet. Etiam ultricies nisi vel augue. Curabitur ullamcorper ultricies nisi. Nam eget dui.</p>
+            <p>Etiam rhoncus. Maecenas tempus, tellus eget condimentum rhoncus, sem quam semper libero, sit amet adipiscing sem neque sed ipsum. Nam quam nunc, blandit vel, luctus pulvinar, hendrerit id, lorem. Maecenas nec odio et ante tincidunt tempus. Donec vitae sapien ut libero venenatis faucibus. Nullam quis ante. Etiam sit amet orci eget eros faucibus tincidunt. Duis leo. Sed fringilla mauris sit amet nibh. Donec sodales sagittis magna.</p>
+            <p>Sed consequat, leo eget bibendum sodales, augue velit cursus nunc, quis gravida magna mi a libero. Fusce vulputate eleifend sapien. Vestibulum purus quam, scelerisque ut, mollis sed, nonummy id, metus. Nullam accumsan lorem in dui. Cras ultricies mi eu turpis hendrerit fringilla. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; In ac dui quis mi consectetuer lacinia. Nam pretium turpis et arcu.</p>
+        </div>
+        <!-- No scroll button here as it's the last section -->
+    </section>
+
+    <script>
+        // --- Configuration ---
+        const G_BLACK     = '#000000';
+        const G_VD_GREY   = '#2A2A2A';
+        const G_D_GREY    = '#555555';
+        const G_MID_GREY  = '#808080';
+        const G_L_GREY    = '#AAAAAA';
+        const G_VL_GREY   = '#D4D4D4';
+        const G_WHITE     = '#FFFFFF';
+
+        const GRAYSCALE_COLORS = [G_BLACK, G_VD_GREY, G_D_GREY, G_MID_GREY, G_L_GREY, G_VL_GREY, G_WHITE];
+        const GRAYSCALE_NAMES = ['Black', 'V.Dark', 'Dark', 'Mid', 'Light', 'V.Light', 'White'];
+
+        // Section 1 Defaults
+        const S1_DEFAULT_TEXT_CONTENT = "VA SMEARING TEST";
+        const S1_DEFAULT_FONT_SIZE_PX = 48;
+        const S1_DEFAULT_TEXT_COLOR_INDEX = 0; // Dark Grey
+        const S1_DEFAULT_BG_COLOR_INDEX = 3;   // Black
+
+        // Section 2 Defaults
+        const S2_DEFAULT_TEXT_COLOR_INDEX = 2; // Black
+        const S2_DEFAULT_BG_COLOR_INDEX = 0;   // White
+
+        const ANIMATION_SPEED_RADIANS_PER_FRAME = 0.03;
+        const RADIUS_PERCENTAGE_OF_MIN_DIMENSION = 0.3; // Make it smaller for a more central circle
+
+        // --- State Variables ---
+        // Section 1
+        let s1_currentTextContent = S1_DEFAULT_TEXT_CONTENT;
+        let s1_currentFontSize = S1_DEFAULT_FONT_SIZE_PX;
+        let s1_currentTextColor = GRAYSCALE_COLORS[S1_DEFAULT_TEXT_COLOR_INDEX];
+        let s1_currentBgColor = GRAYSCALE_COLORS[S1_DEFAULT_BG_COLOR_INDEX];
+        let s1_animationAngle = 0;
+        let s1_animationCenterX, s1_animationCenterY, s1_animationRadius;
+        let s1_animationFrameId;
+
+        // Section 2
+        let s2_currentTextColor = GRAYSCALE_COLORS[S2_DEFAULT_TEXT_COLOR_INDEX];
+        let s2_currentBgColor = GRAYSCALE_COLORS[S2_DEFAULT_BG_COLOR_INDEX];
+
+        // --- DOM Elements ---
+        let circularMotionAreaEl, movingTextEl, s1_textInputEl, s1_fontSizeInputEl;
+        let s1_bgColorSelectorEl, s1_textColorSelectorEl;
+        let section2El, s2_bgColorSelectorEl, s2_textColorSelectorEl, scrollingTextContentEl;
+        let scrollToS2Btn;
+
+
+        // --- Functions ---
+        function createColorButtons(selectorElement, colorsArray, namesArray, onColorSelectCallback, defaultColor) {
+            selectorElement.innerHTML = '';
+            colorsArray.forEach((color, index) => {
+                const button = document.createElement('button');
+                button.classList.add('color-button');
+                button.style.backgroundColor = color;
+                button.title = namesArray[index];
+                if (color === G_WHITE || color === G_VL_GREY) { // Add border for very light buttons
+                    button.style.border = '1px solid #999';
+                } else if (color === G_BLACK || color === G_VD_GREY) {
+                     button.style.border = '1px solid #444';
+                }
+                if (color === defaultColor) {
+                    button.classList.add('selected');
+                }
+                button.addEventListener('click', () => {
+                    onColorSelectCallback(color);
+                    Array.from(selectorElement.children).forEach(child => child.classList.remove('selected'));
+                    button.classList.add('selected');
+                });
+                selectorElement.appendChild(button);
+            });
+        }
+
+        // --- Section 1 Functions ---
+        function updateS1TextContent() {
+            s1_currentTextContent = s1_textInputEl.value;
+            movingTextEl.innerText = s1_currentTextContent;
+        }
+
+        function updateS1FontSize() {
+            const newSize = parseInt(s1_fontSizeInputEl.value, 10);
+            if (!isNaN(newSize) && newSize >= 10 && newSize <= 300) {
+                s1_currentFontSize = newSize;
+                movingTextEl.style.fontSize = `${s1_currentFontSize}px`;
+            }
+        }
+
+        function updateS1TextColor(color) {
+            s1_currentTextColor = color;
+            movingTextEl.style.color = s1_currentTextColor;
+        }
+
+        function updateS1BackgroundColor(color) {
+            s1_currentBgColor = color;
+            circularMotionAreaEl.style.backgroundColor = s1_currentBgColor;
+        }
+
+        function updateS1AnimationParameters() {
+            if (!circularMotionAreaEl) return;
+            s1_animationCenterX = circularMotionAreaEl.clientWidth / 2;
+            s1_animationCenterY = circularMotionAreaEl.clientHeight / 2;
+            const baseRadius = Math.min(s1_animationCenterX, s1_animationCenterY);
+            s1_animationRadius = baseRadius * RADIUS_PERCENTAGE_OF_MIN_DIMENSION;
+            s1_animationRadius = Math.max(10, s1_animationRadius); // ensure min radius
+        }
+
+        function animateS1Text() {
+            s1_animationAngle += ANIMATION_SPEED_RADIANS_PER_FRAME;
+            if (s1_animationAngle > Math.PI * 2) s1_animationAngle -= Math.PI * 2;
+
+            const x = s1_animationCenterX + s1_animationRadius * Math.cos(s1_animationAngle);
+            const y = s1_animationCenterY + s1_animationRadius * Math.sin(s1_animationAngle);
+
+            movingTextEl.style.left = `${x}px`;
+            movingTextEl.style.top = `${y}px`;
+
+            s1_animationFrameId = requestAnimationFrame(animateS1Text);
+        }
+
+        function stopS1Animation() {
+            if (s1_animationFrameId) cancelAnimationFrame(s1_animationFrameId);
+        }
+
+        function startS1Animation() {
+            stopS1Animation();
+            updateS1AnimationParameters();
+            animateS1Text();
+        }
+
+        // --- Section 2 Functions ---
+        function updateS2TextColor(color) {
+            s2_currentTextColor = color;
+            section2El.style.color = s2_currentTextColor; // Apply to whole section for h2 and p
+        }
+
+        function updateS2BackgroundColor(color) {
+            s2_currentBgColor = color;
+            section2El.style.backgroundColor = s2_currentBgColor;
+        }
+
+        // --- Initialization ---
+        window.onload = () => {
+            // Get DOM elements
+            circularMotionAreaEl = document.getElementById('circular-motion-area');
+            movingTextEl = document.getElementById('moving-text');
+            s1_textInputEl = document.getElementById('s1-text-input');
+            s1_fontSizeInputEl = document.getElementById('s1-font-size-input');
+            s1_bgColorSelectorEl = document.getElementById('s1-bg-color-selector');
+            s1_textColorSelectorEl = document.getElementById('s1-text-color-selector');
+            scrollToS2Btn = document.getElementById('scroll-to-s2-btn');
+
+            section2El = document.getElementById('section2');
+            s2_bgColorSelectorEl = document.getElementById('s2-bg-color-selector');
+            s2_textColorSelectorEl = document.getElementById('s2-text-color-selector');
+            scrollingTextContentEl = document.getElementById('scrolling-text-content');
+
+            // --- Setup Section 1 Controls & Initial State ---
+            createColorButtons(s1_bgColorSelectorEl, GRAYSCALE_COLORS, GRAYSCALE_NAMES, updateS1BackgroundColor, s1_currentBgColor);
+            createColorButtons(s1_textColorSelectorEl, GRAYSCALE_COLORS, GRAYSCALE_NAMES, updateS1TextColor, s1_currentTextColor);
+            s1_textInputEl.value = s1_currentTextContent;
+            s1_fontSizeInputEl.value = s1_currentFontSize;
+
+            movingTextEl.innerText = s1_currentTextContent;
+            movingTextEl.style.fontSize = `${s1_currentFontSize}px`;
+            movingTextEl.style.color = s1_currentTextColor;
+            circularMotionAreaEl.style.backgroundColor = s1_currentBgColor;
+
+            s1_textInputEl.addEventListener('input', updateS1TextContent);
+            s1_fontSizeInputEl.addEventListener('input', updateS1FontSize);
+            s1_fontSizeInputEl.addEventListener('change', updateS1FontSize);
+
+            updateS1AnimationParameters();
+            startS1Animation();
+
+            // --- Setup Section 2 Controls & Initial State ---
+            createColorButtons(s2_bgColorSelectorEl, GRAYSCALE_COLORS, GRAYSCALE_NAMES, updateS2BackgroundColor, s2_currentBgColor);
+            createColorButtons(s2_textColorSelectorEl, GRAYSCALE_COLORS, GRAYSCALE_NAMES, updateS2TextColor, s2_currentTextColor);
+
+            section2El.style.backgroundColor = s2_currentBgColor;
+            section2El.style.color = s2_currentTextColor;
+
+
+            // --- Global Event Listeners ---
+            scrollToS2Btn.addEventListener('click', () => {
+                section2El.scrollIntoView({ behavior: 'smooth' });
+            });
+
+            window.addEventListener('resize', () => {
+                updateS1AnimationParameters(); // Recalc for S1 animation
+            });
+
+            // Pause S1 animation when S1 is not visible or tab is hidden
+            const s1Observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !document.hidden) {
+                        startS1Animation();
+                    } else {
+                        stopS1Animation();
+                    }
+                });
+            }, { threshold: 0.01 }); // Start/stop if even a tiny bit is visible/hidden
+
+            s1Observer.observe(circularMotionAreaEl);
+
+            document.addEventListener('visibilitychange', () => {
+                const s1IsVisible = new IntersectionObserverEntry(circularMotionAreaEl).isIntersecting; // Quick check if s1 is in viewport
+                // More accurate would be to re-check via observer or track state.
+                // For simplicity, if tab gets hidden, stop. If visible, IntersectionObserver will handle restart if element is in view.
+                if (document.hidden) {
+                    stopS1Animation();
+                } else {
+                    // Let IntersectionObserver handle restart if section1 becomes visible
+                    // Manually check if circularMotionAreaEl is currently intersecting
+                    const rect = circularMotionAreaEl.getBoundingClientRect();
+                    const isS1Visible = rect.top < window.innerHeight && rect.bottom >= 0;
+                    if(isS1Visible) {
+                        startS1Animation();
+                    }
+                }
+            });
+        };
+    </script>
+
+</body>
+</html>
